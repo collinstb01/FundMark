@@ -1,0 +1,40 @@
+{
+  "name": "fundmark",
+  "version": "1.0.0",
+  "description": "Normalized private fund performance benchmarks from public pension FOIA disclosures",
+  "scripts": {
+    "dev": "npx tsx --require dotenv/config src/server/server.ts",
+    "start": "npx tsx --require dotenv/config src/server/server.ts",
+    "ingest": "npx tsx --require dotenv/config src/ingest.ts",
+    "test:parsers": "npx tsx tests/test-parsers.ts",
+    "test:strategy": "npx tsx tests/test-strategy.ts",
+    "test:ingest": "npx tsx --require dotenv/config tests/test-ingest.ts"
+  },
+  "keywords": [
+    "mcp",
+    "private-equity",
+    "benchmarks",
+    "fund-performance"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@ctxprotocol/sdk": "^0.10.0",
+    "@modelcontextprotocol/sdk": "^1.28.0",
+    "cheerio": "^1.2.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "fuse.js": "^7.1.0",
+    "iconv-lite": "^0.7.2",
+    "node-cron": "^4.2.1",
+    "pdf-parse": "^2.4.5",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.5.0",
+    "@types/pg": "^8.20.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  }
+}
