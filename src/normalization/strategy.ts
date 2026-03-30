@@ -219,7 +219,6 @@ const MANAGER_MAP: Record<string, Strategy> = {
   "tcw special credits": "private_debt", "mhr institutional": "private_debt",
   "matlinpatterson": "private_debt", "wlr recovery": "private_debt",
   "montauk triguard": "private_debt", "oha ": "private_debt",
-  "gso energy": "private_debt",
 
   // New private debt mappings
   "capital resource lenders": "private_debt", "capital resource partners": "private_debt",
