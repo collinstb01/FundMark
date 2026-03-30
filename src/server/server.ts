@@ -263,7 +263,21 @@ function createMcpServer(): Server {
         const vintageYear = (args as any)?.vintage_year || 2019;
         const geography = (args as any)?.geography || "US";
 
-        const result = await getBenchmark(strategy, vintageYear, geography);
+        const raw = await getBenchmark(strategy, vintageYear, geography);
+        const result = {
+          ...raw,
+          vintage_year: Number(raw.vintage_year),
+          fund_count: Number(raw.fund_count),
+          median_net_irr:
+            raw.median_net_irr !== null ? Number(raw.median_net_irr) : null,
+          q1_threshold_irr:
+            raw.q1_threshold_irr !== null ? Number(raw.q1_threshold_irr) : null,
+          q3_threshold_irr:
+            raw.q3_threshold_irr !== null ? Number(raw.q3_threshold_irr) : null,
+          median_tvpi:
+            raw.median_tvpi !== null ? Number(raw.median_tvpi) : null,
+          median_dpi: raw.median_dpi !== null ? Number(raw.median_dpi) : null,
+        };
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           structuredContent: result,
@@ -274,14 +288,37 @@ function createMcpServer(): Server {
         const fundName =
           (args as any)?.fund_name || "Blackstone Capital Partners";
 
-        const result = await lookupFund(fundName);
-        if (!result) {
+        const raw = await lookupFund(fundName);
+        if (!raw) {
           return {
             content: [
               { type: "text", text: `No fund found matching "${fundName}".` },
             ],
           };
         }
+
+        const result = {
+          ...raw,
+          vintage_year: Number(raw.vintage_year),
+          net_irr:
+            raw.net_irr !== null && raw.net_irr !== undefined
+              ? Number(raw.net_irr)
+              : null,
+          tvpi:
+            raw.tvpi !== null && raw.tvpi !== undefined
+              ? Number(raw.tvpi)
+              : null,
+          dpi:
+            raw.dpi !== null && raw.dpi !== undefined ? Number(raw.dpi) : null,
+          peer_quartile:
+            raw.peer_quartile !== null && raw.peer_quartile !== undefined
+              ? Number(raw.peer_quartile)
+              : null,
+          peer_fund_count:
+            raw.peer_fund_count !== null && raw.peer_fund_count !== undefined
+              ? Number(raw.peer_fund_count)
+              : null,
+        };
 
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
@@ -290,10 +327,15 @@ function createMcpServer(): Server {
       }
 
       if (name === "list_available_benchmarks") {
-        const [benchmarks, total_funds] = await Promise.all([
+        const [raw, total_funds] = await Promise.all([
           getAvailableBenchmarks(),
           getTotalFundCount(),
         ]);
+        const benchmarks = raw.map((b) => ({
+          strategy: b.strategy,
+          vintage_year: Number(b.vintage_year),
+          fund_count: Number(b.fund_count),
+        }));
         const result = {
           benchmarks,
           total_funds,
