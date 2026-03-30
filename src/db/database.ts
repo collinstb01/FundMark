@@ -222,6 +222,13 @@ export async function getAvailableBenchmarks(): Promise<
   return result.rows;
 }
 
+export async function getTotalFundCount(): Promise<number> {
+  const result = await pool.query<{ c: string }>(
+    `SELECT COUNT(*)::text AS c FROM funds`,
+  );
+  return Number(result.rows[0]?.c ?? 0);
+}
+
 // === HELPERS ===
 
 function percentile(sorted: number[], pct: number): number {

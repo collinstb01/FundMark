@@ -8,8 +8,13 @@ import {
   CallToolRequestSchema,
   isInitializeRequest,
 } from "@modelcontextprotocol/sdk/types.js";
-import { createContextMiddleware } from "@ctxprotocol/sdk";
-import { initDB, getBenchmark, lookupFund, getAvailableBenchmarks } from "../db/database";
+import {
+  initDB,
+  getBenchmark,
+  lookupFund,
+  getAvailableBenchmarks,
+  getTotalFundCount,
+} from "../db/database";
 import { startWeeklyMonitor } from "../monitoring/source-monitor";
 
 const TOOLS = [
@@ -75,27 +80,28 @@ const TOOLS = [
           description: "Number of funds in this cell. Quartiles require ≥15.",
         },
         median_net_irr: {
-          type: "number",
+          type: ["number", "null"],
           description: "Median net IRR (%) across funds in this cell",
         },
         q1_threshold_irr: {
-          type: "number",
+          type: ["number", "null"],
           description: "Top quartile threshold IRR. Null if fund_count < 15.",
         },
         q3_threshold_irr: {
-          type: "number",
-          description: "Bottom quartile threshold IRR. Null if fund_count < 15.",
+          type: ["number", "null"],
+          description:
+            "Bottom quartile threshold IRR. Null if fund_count < 15.",
         },
         median_tvpi: {
-          type: "number",
+          type: ["number", "null"],
           description: "Median Total Value to Paid-In multiple",
         },
         median_dpi: {
-          type: "number",
+          type: ["number", "null"],
           description: "Median Distributions to Paid-In multiple",
         },
         as_of_date: {
-          type: "string",
+          type: ["string", "null"],
           description: "Most recent reporting date across sources",
         },
         sources: {
@@ -104,7 +110,13 @@ const TOOLS = [
           description: "Pension sources contributing to this benchmark",
         },
       },
-      required: ["strategy", "vintage_year", "geography", "fund_count", "sources"],
+      required: [
+        "strategy",
+        "vintage_year",
+        "geography",
+        "fund_count",
+        "sources",
+      ],
     },
   },
   {
@@ -148,15 +160,24 @@ const TOOLS = [
         manager: { type: "string", description: "Fund manager name" },
         vintage_year: { type: "number", description: "Vintage year" },
         strategy: { type: "string", description: "Strategy classification" },
-        net_irr: { type: "number", description: "Net IRR (%)" },
-        tvpi: { type: "number", description: "Total Value to Paid-In multiple" },
-        dpi: { type: "number", description: "Distributions to Paid-In multiple" },
+        net_irr: {
+          type: ["number", "null"],
+          description: "Net IRR (%). Null if not yet reported.",
+        },
+        tvpi: {
+          type: ["number", "null"],
+          description: "Total Value to Paid-In multiple",
+        },
+        dpi: {
+          type: ["number", "null"],
+          description: "Distributions to Paid-In multiple",
+        },
         peer_quartile: {
-          type: "number",
+          type: ["number", "null"],
           description: "Quartile ranking (1=top, 4=bottom). Null if <15 peers.",
         },
         peer_fund_count: {
-          type: "number",
+          type: ["number", "null"],
           description: "Number of peer funds used for quartile ranking",
         },
         sources: {
@@ -164,7 +185,7 @@ const TOOLS = [
           items: { type: "string" },
           description: "Data sources (e.g., calpers, oregon)",
         },
-        as_of_date: { type: "string", description: "Reporting date" },
+        as_of_date: { type: ["string", "null"], description: "Reporting date" },
       },
       required: ["fund_name", "manager", "vintage_year", "strategy"],
     },
@@ -226,7 +247,7 @@ initDB();
 function createMcpServer(): Server {
   const server = new Server(
     { name: "fundmark", version: "1.0.0" },
-    { capabilities: { tools: {} } }
+    { capabilities: { tools: {} } },
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -250,7 +271,8 @@ function createMcpServer(): Server {
       }
 
       if (name === "lookup_fund") {
-        const fundName = (args as any)?.fund_name || "Blackstone Capital Partners";
+        const fundName =
+          (args as any)?.fund_name || "Blackstone Capital Partners";
 
         const result = await lookupFund(fundName);
         if (!result) {
@@ -268,13 +290,13 @@ function createMcpServer(): Server {
       }
 
       if (name === "list_available_benchmarks") {
-        const benchmarks = await getAvailableBenchmarks();
+        const [benchmarks, total_funds] = await Promise.all([
+          getAvailableBenchmarks(),
+          getTotalFundCount(),
+        ]);
         const result = {
           benchmarks,
-          total_funds: benchmarks.reduce(
-            (sum: number, b: any) => sum + parseInt(b.fund_count),
-            0
-          ),
+          total_funds,
           data_sources: ["calpers", "oregon", "calstrs", "wsib", "florida"],
         };
 
@@ -291,7 +313,10 @@ function createMcpServer(): Server {
     } catch (err) {
       return {
         content: [
-          { type: "text", text: `Error executing ${name}: ${(err as Error).message}` },
+          {
+            type: "text",
+            text: `Error executing ${name}: ${(err as Error).message}`,
+          },
         ],
         isError: true,
       };
@@ -303,8 +328,6 @@ function createMcpServer(): Server {
 
 const app = express();
 app.use(express.json());
-
-//app.use("/mcp", createContextMiddleware());
 
 const transports: Record<string, StreamableHTTPServerTransport> = {};
 
