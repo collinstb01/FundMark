@@ -8,12 +8,12 @@ import {
   CallToolRequestSchema,
   isInitializeRequest,
 } from "@modelcontextprotocol/sdk/types.js";
+import { createContextMiddleware } from "@ctxprotocol/sdk";
 import {
   initDB,
   getBenchmark,
   lookupFund,
   getAvailableBenchmarks,
-  getTotalFundCount,
 } from "../db/database";
 import { startWeeklyMonitor } from "../monitoring/source-monitor";
 
@@ -327,18 +327,18 @@ function createMcpServer(): Server {
       }
 
       if (name === "list_available_benchmarks") {
-        const [raw, total_funds] = await Promise.all([
-          getAvailableBenchmarks(),
-          getTotalFundCount(),
-        ]);
-        const benchmarks = raw.map((b) => ({
+        const raw = await getAvailableBenchmarks();
+        const benchmarks = raw.map((b: any) => ({
           strategy: b.strategy,
           vintage_year: Number(b.vintage_year),
           fund_count: Number(b.fund_count),
         }));
         const result = {
           benchmarks,
-          total_funds,
+          total_funds: benchmarks.reduce(
+            (sum: number, b: any) => sum + b.fund_count,
+            0,
+          ),
           data_sources: ["calpers", "oregon", "calstrs", "wsib", "florida"],
         };
 
@@ -370,6 +370,8 @@ function createMcpServer(): Server {
 
 const app = express();
 app.use(express.json());
+
+//app.use("/mcp", createContextMiddleware());
 
 const transports: Record<string, StreamableHTTPServerTransport> = {};
 
