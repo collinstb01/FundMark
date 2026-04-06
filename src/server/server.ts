@@ -371,7 +371,7 @@ function createMcpServer(): Server {
 const app = express();
 app.use(express.json());
 
-//app.use("/mcp", createContextMiddleware());
+app.use("/mcp", createContextMiddleware());
 
 const transports: Record<string, StreamableHTTPServerTransport> = {};
 
